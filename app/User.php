@@ -4,6 +4,7 @@ namespace App;
 
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class User extends Authenticatable
@@ -40,5 +41,22 @@ class User extends Authenticatable
     public function posts()
     {
         return $this->hasMany('App\BlogPost');
+
     }
+
+    //scope user that have a lot of post.
+
+    public function scopeMostActiveUser(Builder $query)
+    {
+        return $query->withCount('Posts')->orderBy('posts_count', 'desc');
+    }
+    // most active user last month
+    public function scopeMostActiveUserLastMonth(Builder $query)
+    {
+        return $query->withCount(['Posts' => function(Builder $query){
+            $query->whereBetween(static::CREATED_AT, [now()->subMonths(1), now()]);
+        }])->has('posts', '>=', 2)
+        ->orderBy('posts_count', 'desc');
+    }
+    
 }

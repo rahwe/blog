@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Requests\StorePostRequest;
 use Illuminate\Support\Facades\Auth;
 use App\BlogPost;
+use App\User;
 
 
 // here is how laravel map the method between 
@@ -40,7 +41,10 @@ class PostController extends Controller
             //withCount method will add attribut comment_count to BlogPost
             //latest() is the scope method from scopeLatest() 
             //use latest() to add more query to existing query of BlogPost model
-            'posts'=> BlogPost::latest()->withCount('comments')->get()
+            'posts'=> BlogPost::latest()->withCount('comments')->get(),
+            'mostCommentPost' => BlogPost::mostCommentPost()->take(5)->get(),
+            'mostActiveUser' => User::mostActiveUser()->take(5)->get(),
+            'mostActiveUserLastMonth' => User::mostActiveUserLastMonth()->take(5)->get()
             ]);
     }
 

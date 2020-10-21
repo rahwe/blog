@@ -9,8 +9,13 @@
     <p>added at {{ $post->created_at->diffForHumans( )}}</p>
 
     {{--This compare if post is created lest than 5 minute, it show "New"--}}
-    @if( (new Carbon\Carbon())->diffInMinutes($post->created_at) < 5 )
-        <strong>New</strong>
+    @if( (new Carbon\Carbon())->diffInMinutes($post->created_at) < 20)
+     {{--This use of component, we give the type if we don't it will use type of danger --}}
+     
+    @badge(['show'=>now()->diffInMinutes($post->created_at) < 5])
+        <strong>new</strong>
+    @endbadge
+
     @endif
 
     @forelse( $post->comments as $comment)

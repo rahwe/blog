@@ -2,7 +2,7 @@
 
 namespace App;
 
-use App\Scopes\LatestScope;
+use App\Scopes\DeleteAdminScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -28,11 +28,17 @@ class BlogPost extends Model
      * This below is query scope query builder.
      * we make it to make our own query and apply 
      * it to existing query of the model
+     * Scope is used for make more Complicated query
+     * for model
      * below code is to make post orderBy created_at ,desc
      */
     public function scopeLatest(Builder $query)
     {
         return $query->orderBy(static::CREATED_AT,'desc');
+    }
+
+    public function scopeMostCommentPost(Builder $query){
+        return $query->withCount('comments')->orderBy('comments_count', 'desc');
     }
     /***
      * use deleting event to delete the relation 
@@ -43,6 +49,7 @@ class BlogPost extends Model
      */
     public static function boot()
     {
+        static::addGlobalScope(new deleteAdminScope);
         parent::boot();
 
         //static::addGlobalScope(new LatestScope);
