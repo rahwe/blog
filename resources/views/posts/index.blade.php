@@ -8,7 +8,8 @@
 
     @forelse( $posts as $post)
         
-            <h5>
+          <h5>
+
             @if($post->trashed())
               <del>
             @endif
@@ -17,16 +18,27 @@
               </del>
             @endif
           </h5>
+
             <div class="col-8 no-gutters">
                 <div class="fm-inline">
+                  <x-datetime 'date'=>$post->created_at />
                   @datetime(['date'=>$post->created_at, 'name'=>$post->user->name])
                     Added
                   @enddatetime
+
+                 
+                    
+                  
+
                 </div>
                 @if($post->comments_count)
+                
                     <p>{{$post->comments_count}} comments</p>
+
                 @else
+
                     <p>No comment yet</p>
+
                 @endif
             </div>
         

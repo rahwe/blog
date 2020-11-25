@@ -1,13 +1,14 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\Request;
 use App\Http\Requests\StorePostRequest;
 use Illuminate\Support\Facades\Auth;
 use App\BlogPost;
 use App\User;
-
+use Illuminate\Support\Facades\Cache;
 
 // here is how laravel map the method between 
 // policy and PostController
@@ -28,7 +29,7 @@ class PostController extends Controller
     public function __construct()
     {
         $this->middleware('auth')
-            ->only(['create','store','delete','update','edit','destroy']);
+            ->only(['create', 'store', 'delete', 'update', 'edit', 'destroy']);
     }
     /**
      * Display a listing of the resource.
@@ -37,18 +38,39 @@ class PostController extends Controller
      */
     public function index()
     {
-        return view('posts.index', [ 
+
+        // We use cache to store data that we already fetch from the 
+        // database to store it in memory when user come to page 
+        // for specific time that we declare in cache, the page will load fast
+        // But there is a problem when the data being change or update
+        // cache will give only the remember data, so we will use Cache::forget()
+        // to make model fatch the raw data from the database
+        // below how we use Cache remember the data
+
+        $mostCommentedPost = Cache::remember('mostCommentPost', now()->addSecond(10), function () {
+            return BlogPost::mostCommentPost()->take(5)->get();
+        });
+        $mostActiveUser = Cache::remember('mostActiveUser', now()->addSecond(10), function () {
+            return User::mostActiveUser()->take(5)->get();
+        });
+
+        $mostActiveUserLastMonth = Cache::remember('mostActiveUserLastMonth', now()->addSecond(10), function () {
+            return User::mostActiveUserLastMonth()->take(5)->get();
+        });
+
+
+        return view('posts.index', [
             //withCount method will add attribut comment_count to BlogPost
             //latest() is the scope method from scopeLatest() 
             //use latest() to add more query to existing query of BlogPost model
-            'posts'=> BlogPost::latest()->withCount('comments')->get(),
-            'mostCommentPost' => BlogPost::mostCommentPost()->take(5)->get(),
-            'mostActiveUser' => User::mostActiveUser()->take(5)->get(),
-            'mostActiveUserLastMonth' => User::mostActiveUserLastMonth()->take(5)->get()
-            ]);
+            'posts' => BlogPost::latest()->withCount('comments')->with('user')->get(),
+            'mostCommentPost' => $mostCommentedPost,
+            'mostActiveUser' => $mostActiveUser,
+            'mostActiveUserLastMonth' => $mostActiveUserLastMonth
+        ]);
     }
 
-   
+
 
     /**
      * Display the specified resource.
@@ -59,25 +81,33 @@ class PostController extends Controller
     public function show(Request $request, $id)
 
     {
+
+        // here we call cache from BlogPost model
+        $showPost = Cache::remember('show-post-{$id}', 60, function () use ($id) {
+            return BlogPost::with('comments')->findOrFail($id);
+        });
+
+
         /** keep session for one more request
          **$request->session()->reflash();
-        **/
+         **/
+        //dd(phpinfo());
         return view('posts.show', [
-            
-            'post' => BlogPost::with('comments')->findOrFail($id)
-            
-            ]);
 
-            // this one way to order comment by created_at
-            // another way is to add latest() scope method to
-            // the relation in Comment Model
-            // return view('posts.show', [
-            
-            //     'post' => BlogPost::with(['comments' => function($query){
-            //         return $query->latest();
-            //     }])->findOrFail($id)
-                
-            //     ]);
+            'post' => $showPost
+
+        ]);
+
+        // this one way to order comment by created_at
+        // another way is to add latest() scope method to
+        // the relation in Comment Model
+        // return view('posts.show', [
+
+        //     'post' => BlogPost::with(['comments' => function($query){
+        //         return $query->latest();
+        //     }])->findOrFail($id)
+
+        //     ]);
     }
 
     public function create()
@@ -94,17 +124,16 @@ class PostController extends Controller
         $blogPost = BlogPost::create($validatedData);
 
         $request->session()->flash('alert', 'Post is created succesfully.');
-        return redirect()->route('posts.show', [ 'post'=>$blogPost->id]);
-        
+        return redirect()->route('posts.show', ['post' => $blogPost->id]);
     }
 
     public function edit($id)
     {
         $post = BlogPost::findOrFail($id);
         $this->authorize($post);
-        return view('posts.edit', ['post' => $post ]);
+        return view('posts.edit', ['post' => $post]);
     }
-    
+
     public function update(StorePostRequest $request, $id)
     {
         // use StorePostRequest because we validate the same field as create
@@ -113,7 +142,7 @@ class PostController extends Controller
         // short hand of call Gate
         $this->authorize($post);
 
-        
+
         // call fron AuthServiceProvider
         // if(Gate::denies('update-post', $post)){
         //     abort(403, 'You can not update this post.');
@@ -126,8 +155,7 @@ class PostController extends Controller
         $post->save();
 
         $request->session()->flash('alert', 'Post is updated succesfully.');
-        return redirect()->route('posts.show', [ 'post'=>$post->id]);
-
+        return redirect()->route('posts.show', ['post' => $post->id]);
     }
 
     public function destroy(Request $request, $id)
@@ -145,6 +173,4 @@ class PostController extends Controller
         $request->session()->flash('alert', 'Post is deleted successully.');
         return redirect()->route('posts.index');
     }
-
-  
 }

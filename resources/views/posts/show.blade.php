@@ -27,4 +27,6 @@
 
     @endforelse
 
+    @tag(['tag' => $post->tags])@endtag
+
 @endsection

@@ -6,13 +6,14 @@ use App\Scopes\DeleteAdminScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 
 class BlogPost extends Model
 {
     use softDeletes;
     // customize table name
     //protected $table = 'blogposts';
-    protected $fillable = ['title', 'content','user_id'];
+    protected $fillable = ['title', 'content', 'user_id'];
 
     public function comments()
     {
@@ -22,6 +23,11 @@ class BlogPost extends Model
     public function user()
     {
         return $this->belongsTo('App\User');
+    }
+
+    public function tags()
+    {
+        return $this->belongsToMany('App\Tag')->withTimestamps();
     }
 
     /**
@@ -34,10 +40,11 @@ class BlogPost extends Model
      */
     public function scopeLatest(Builder $query)
     {
-        return $query->orderBy(static::CREATED_AT,'desc');
+        return $query->orderBy(static::CREATED_AT, 'desc');
     }
 
-    public function scopeMostCommentPost(Builder $query){
+    public function scopeMostCommentPost(Builder $query)
+    {
         return $query->withCount('comments')->orderBy('comments_count', 'desc');
     }
     /***
@@ -54,16 +61,24 @@ class BlogPost extends Model
 
         //static::addGlobalScope(new LatestScope);
 
-        static::deleting(function (BlogPost $blogpost){
+        static::deleting(function (BlogPost $blogpost) {
             $blogpost->comments()->delete();
+        });
+
+        // Cache::forget() to forget data and make model query the 
+        // raw data back, because when data is being updated Cache will
+        // give back only data in cache and new data will not. show we 
+        // have to forget it
+
+        static::updating(function (BlogPost $blogPost) {
+            Cache::forget("show-post-{$blogPost->id}");
         });
 
         /**
          * restore comments when restore the post
          */
-        static::restoring(function(BlogPost $blogPost){
+        static::restoring(function (BlogPost $blogPost) {
             $blogPost->comments()->restore();
         });
-
-    } 
+    }
 }

@@ -25,7 +25,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         // we aliases badge 
-        Blade::component('components.badge','badge');
+        Blade::component('components.badge', 'badge');
         Blade::component('components.post_date_auther', 'datetime');
+        //Blade::component('components.tag', 'tags');
+        Blade::component('components.tag', 'tags');
     }
 }
